@@ -1,0 +1,39 @@
+PROJECT: 20_ZScore_ANOM
+TITLE: Data Sources & Feature Engineering
+
+--------------------------------------------------
+OVERVIEW:
+This dataset contains 1,634 CNC machining cycle records from a high-speed machining center spanning three production shifts. The ML task is statistical anomaly detection using Z-Score (|Z| > 3.0 on any of four sensor channels). No labeled failure data required — only a process baseline. Engineering-validated anomaly rate: 6.5% (106 cycles). Z-Score detected rate: 5.6% (91 cycles). The 15 missed cycles represent borderline force exceedances below the 3-sigma threshold but above the engineering limit — a known structural gap. No formal Data Origin table with per-feature instrument attribution is present in the README; source systems are described at the channel level below.
+
+--------------------------------------------------
+REAL-WORLD DATA SOURCES:
+
+Feature          | Source System                          | Notes
+-----------------|----------------------------------------|------------------------------
+vibration_mm_s   | CNC machining center / SCADA           | Spindle channel — vibration amplitude from spindle housing sensor; logged per cycle
+cutting_force_n  | CNC machining center / Force sensor    | Force channel — cutting force from dynamometer or spindle load cell; logged per cycle
+tool_temp_c      | CNC machining center / Thermal sensor  | Thermal channel — tool or spindle temperature from pyrometer or thermocouple; logged per cycle
+energy_kwh       | CNC machining center / Drive system    | Drive channel — energy consumption from spindle drive energy meter; logged per cycle
+
+--------------------------------------------------
+VARIABLE DESCRIPTIONS:
+
+vibration_mm_s  - Vibration amplitude (mm/s); normal range 3.2–5.2 mm/s. Failure signature: chatter, tool resonance, bearing wear. Primary detection trigger — crosses 3-sigma in 100% of 91 detected anomalous cycles. Normal mean: 4.22 mm/s, Anomaly mean: 8.57 mm/s (+3.66 sigma).
+cutting_force_n - Cutting force (N); normal range 95–145 N. Failure signature: tool dulling, material hardness variation, chip clogging. Secondary trigger (81.3% of detected cycles). Normal mean: 120.16 N, Anomaly mean: 177.1 N (+3.16 sigma). Engineering limit: 160 N; 3-sigma threshold: 174.3 N.
+tool_temp_c     - Tool or spindle temperature (°C); normal range 48–68°C. Failure signature: thermal runaway, dry cutting, coolant failure. Secondary trigger (79.1% of detected cycles). Normal mean: 57.84°C, Anomaly mean: 85.8°C (+3.39 sigma).
+energy_kwh      - Machining cycle energy consumption (kWh); normal range 1.9–2.9 kWh. Failure signature: mechanical binding, motor overload, friction. Secondary trigger (79.1% of detected cycles). Normal mean: 2.39 kWh, Anomaly mean: 3.72 kWh (+3.32 sigma).
+
+--------------------------------------------------
+FEATURE ENGINEERING:
+
+No machine learning model trained. Z-Score computed per feature: Z_i = (x_i - mu) / sigma where mu and sigma are estimated from the process baseline. Flag condition (OR-gate): a cycle is anomalous if max(|Z_i|) > 3.0 across any of the four sensors. Mu and sigma estimated from historical normal-only cycles. D'Agostino K² normality test confirms approximate Gaussianity on normal-only cycles for all four sensors — validating the Z-Score assumption. Full dataset fails normality test due to heavy tails from anomalous cycles, which is itself confirmation the method is working. Precision = 1.000 is structural: every Z-Score flag corresponds to an engineering limit violation by construction (3-sigma thresholds sit above engineering limits for all four sensors in this operational window).
+
+--------------------------------------------------
+BUSINESS CONTEXT:
+
+Used by CNC process engineers and maintenance teams in precision machining operations. Z-Score detection enables self-monitoring without labeled failure data — only a baseline period of normal operation is required. The method is fully transparent: a maintenance technician can verify a Z-Score of 4.46 on the vibration channel and immediately understand both severity and which physical subsystem to investigate. Vibration is the leading indicator and the right sensor to instrument first: it crosses 3-sigma in 100% of detected events. The 15 missed borderline force events are the honest structural limit — tightening to |Z| > 2.5 would catch them but generate false alarms across the normal population.
+
+--------------------------------------------------
+GOAL:
+
+Detect anomalous CNC machining cycles using statistical Z-Score analysis on four continuous sensor signals without labeled failure data, quantifying the structural gap between the 3-sigma threshold and the engineering process limit, and validating Gaussianity of the process baseline. Precision = 1.000 (zero false alarms), Recall = 0.858 (91/106 anomalies detected), F1 = 0.924. 1,634 total cycles: 1,528 true normal, 91 true anomalies detected, 15 borderline force events missed.

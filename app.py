@@ -374,7 +374,7 @@ with tab2:
         ax.grid(True, alpha=0.4)
     plt.tight_layout()
     st.pyplot(fig_z, use_container_width=True); plt.close()
-    st.caption("Clean separation — anomalous cycles cluster well above |Z|=3. No overlap zone.")
+    st.caption("Detected anomalies cluster above |Z|=3. Borderline force cycles (FNs) sit in the gap between engineering limit and 3σ threshold.")
 
 # ══ TAB 3 ══════════════════════════════════════════════════════════════════════
 with tab3:
